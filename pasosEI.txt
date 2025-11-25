@@ -1,0 +1,11 @@
+1) Redacción del script para el levantamiento de una red AD HOC
+2) Identifiación de los parámetros de configuaraicón para cada usuario:
+-Identificar la interfas de red inalámbrica de Wifi, mis caso (wlo1)
+3) Ejecución y comprobación:
+sudo ./crear_adhoc.sh 
+iwconfig wlo1
+ip addr show wlo1
+*Verififación de la capacidad de la NIC: iw list | grep -A 8 "Supported interface modes"
+4) Creación de un nodo de restauración de la interfaz
+systemctl status NetworkManager
+5) Implementación de dos scripts en bash, para la transmisión y recepción, necesario para cada usuario en la red y que vaya a tener accesoa  la video conferencia, i.e, al par que vaya a conversar y realizar la valoración correspondiente
