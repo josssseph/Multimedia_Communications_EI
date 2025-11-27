@@ -9,3 +9,12 @@ ip addr show wlo1
 4) Creación de un nodo de restauración de la interfaz
 systemctl status NetworkManager
 5) Implementación de dos scripts en bash, para la transmisión y recepción, necesario para cada usuario en la red y que vaya a tener accesoa  la video conferencia, i.e, al par que vaya a conversar y realizar la valoración correspondiente
+
+--Fallo la pc de mi compañero no funcionó, por tanto se paso a usar un router como AP---
+1) Prueba de transmisión unidireccional, Carlos Tx y Joseph Rx.
+En el lado de Carlos, necesario: python3 -m http.server 8000
+
+2) Script optimizado para comuicacion bidireccional en ambos usuarios
+arecord --list-devices
+
+
