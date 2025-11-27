@@ -14,14 +14,14 @@ def analizar_pcapng_throughput_delay(archivo_pcapng, ip_filtro="192.168.0.101", 
     """
     print(f"Analizando {archivo_pcapng}...")
     
-    # Leer el archivo pcapng
     paquetes = rdpcap(archivo_pcapng)
     
-    # Filtrar paquetes por IP y puertos de interés
+    # Filtrar paquetes bidireccionales
     paquetes_filtrados = []
     for pkt in paquetes:
         if IP in pkt and UDP in pkt:
-            if (pkt[IP].dst == ip_filtro and 
+            # Considerar tanto destino como origen
+            if ((pkt[IP].dst == ip_filtro or pkt[IP].src == ip_filtro) and 
                 (pkt[UDP].dport in puertos or pkt[UDP].sport in puertos)):
                 paquetes_filtrados.append(pkt)
     
@@ -31,37 +31,42 @@ def analizar_pcapng_throughput_delay(archivo_pcapng, ip_filtro="192.168.0.101", 
     
     print(f"  Paquetes filtrados: {len(paquetes_filtrados)}")
     
-    # Convertir timestamps a float explícitamente
+    # Convertir timestamps
     for pkt in paquetes_filtrados:
         pkt.time = float(pkt.time)
     
-    # Obtener timestamp inicial
     timestamp_inicial = paquetes_filtrados[0].time
-    
-    # Calcular throughput y delay por intervalos de 1 segundo
     throughputs = []
     delays = []
     
-    intervalo = 1 # 1 segundo
+    intervalo = 0.01  # Cada cuanto se los paquetes (Periodo de muestreo)
     tiempo_actual = timestamp_inicial
     fin_tiempo = paquetes_filtrados[-1].time
     
     while tiempo_actual <= fin_tiempo:
-        # Paquetes en el intervalo actual
         paquetes_intervalo = [p for p in paquetes_filtrados 
                              if tiempo_actual <= p.time < tiempo_actual + intervalo]
         
         if paquetes_intervalo:
-            # Throughput: bytes por segundo
+            # THROUGHPUT: tasa real en bits/segundo
             bytes_totales = sum(len(p) for p in paquetes_intervalo)
-            throughput_bps = bytes_totales * 8  # Convertir a bits por segundo
-            throughput_mbps = throughput_bps / 1_000_000  # Convertir a Mbps
+            throughput_bps = (bytes_totales * 8) / intervalo  # ¡DIVIDIR por intervalo!
+            throughput_mbps = throughput_bps / 1_000_000
             
-            # Delay: diferencia entre primer y último paquete del intervalo
-            delay_intervalo = paquetes_intervalo[-1].time - paquetes_intervalo[0].time
+            # Jitter entre paquetes consecutivos
+            if len(paquetes_intervalo) > 1:
+                # Calcular jitter como diferencia entre delays inter-paquete
+                delays_inter_paquete = []
+                for i in range(1, len(paquetes_intervalo)):
+                    time_diff = paquetes_intervalo[i].time - paquetes_intervalo[i-1].time
+                    delays_inter_paquete.append(time_diff * 1000)  # ms
+                
+                delay_promedio = np.mean(delays_inter_paquete) if delays_inter_paquete else 0
+            else:
+                delay_promedio = 0
             
             throughputs.append(throughput_mbps)
-            delays.append(delay_intervalo * 1000)  # Convertir a milisegundos
+            delays.append(delay_promedio)
         else:
             throughputs.append(0)
             delays.append(0)
@@ -143,7 +148,7 @@ def calcular_estadisticas(datos_por_distancia):
                 'Max': np.max(delay_array)
             }
             
-            print(f"Distancia D{distancia} - Delay: {media_delay:.4f} ms, σ: {desv_delay:.4f}")
+            print(f"Distancia D{distancia} - Jitter: {media_delay:.4f} ms, σ: {desv_delay:.4f}")
         else:
             print(f"Distancia D{distancia} - Delay: Sin datos válidos")
     
@@ -253,9 +258,9 @@ def generar_graficas(resultados_throughput, resultados_delay, z_valor):
                 fontsize=9, color='black'
             )
         
-        ax2.set_title('Delay Promedio por Distancia', fontsize=14)
+        ax2.set_title('Jitter Promedio por Distancia', fontsize=14)
         ax2.set_xlabel('Distancia', fontsize=12)
-        ax2.set_ylabel('Delay (ms)', fontsize=12)
+        ax2.set_ylabel('Jitter (ms)', fontsize=12)
         ax2.grid(axis='y', linestyle='--', alpha=0.7)
     else:
         ax2.text(0.5, 0.5, 'No hay datos de Delay', 
@@ -300,9 +305,9 @@ def generar_graficas_tiempo_real(datos_por_distancia):
     ax1.legend()
     ax1.grid(True, linestyle='--', alpha=0.7)
     
-    ax2.set_title('Delay en Tiempo Real por Distancia', fontsize=14)
+    ax2.set_title('Jitter en Tiempo Real por Distancia', fontsize=14)
     ax2.set_xlabel('Tiempo (segundos)', fontsize=12)
-    ax2.set_ylabel('Delay (ms)', fontsize=12)
+    ax2.set_ylabel('Jitter (ms)', fontsize=12)
     ax2.legend()
     ax2.grid(True, linestyle='--', alpha=0.7)
     

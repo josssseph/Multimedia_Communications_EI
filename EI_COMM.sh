@@ -13,7 +13,7 @@ MI_IP="$1"
 IP_PEER="$2"
 
 VIDEO_DEVICE="/dev/video0"
-AUDIO_DEVICE="hw:0,0" 
+AUDIO_DEVICE="hw:1,0" 
 
 PORT_VIDEO=5000   
 PORT_AUDIO=5002   
@@ -46,12 +46,12 @@ echo "Log: $LOGFILE"
 
 echo "Iniciando FFMPEG..."
 ffmpeg \
-  -f v4l2 -thread_queue_size 64 -i "$VIDEO_DEVICE" \
+  -f v4l2 -thread_queue_size 64 -video_size cif -i "$VIDEO_DEVICE" \
   -f alsa -thread_queue_size 64 -i "$AUDIO_DEVICE" \
   -use_wallclock_as_timestamps 1 \
   \
   -map 0:v \
-  -c:v libx264 -b:v 400k -r 16 -g 16 -keyint_min 16 \
+  -c:v libx264 -b:v 200k\
   -preset ultrafast -tune zerolatency -pix_fmt yuv420p \
   -f rtp "rtp://${IP_PEER}:${PORT_VIDEO}" \
   \
